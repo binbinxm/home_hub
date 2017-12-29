@@ -1,6 +1,7 @@
 # coding=utf-8
 # !/usr/bin/python3
 
+import traceback
 import datetime
 import time
 import hmac
@@ -123,6 +124,32 @@ def ip_lookup(mac_list):
     return ip
 
 
+def func_arduino(ip, mac):
+    msg = {'message': 'device IP not found', 'status': 'fail'}
+    try:
+        if not ip == None:
+            msg = requests.get('http://' + settings.arduino.ip).json()['dht22']
+    except Exception:
+        traceback.print_exc()
+    finally:
+        return msg
+
+def func_sp2_00(ip, mac):
+    msg = {'message': 'device IP not found', 'status': 'fail'}
+    try:
+        if not ip == None:
+            sp2_00 = broadlink.sp2(host=(settings.sp2_00.ip,80), mac=bytearray.fromhex(settings.sp2_00.mac.replace(':','')))
+            sp2_00.auth()
+            state = sp2_00.check_power()
+            if state:
+                msg = {'status':'succeed', 'message':'on'}
+            else:
+                msg = {'status':'succeed', 'message':'off'}
+    except Exception:
+        traceback.print_exc()
+    finally:
+        return msg
+
 # =====================================================
 if __name__ == '__main__':
     mqttc = mqtt.Client(client_id)
@@ -147,23 +174,10 @@ if __name__ == '__main__':
         print([settings.arduino.ip, settings.sp2_00.ip])
         
         msg = {}
-        if settings.arduino.ip == None:
-            msg['dht22'] = {'message': 'device IP not found', 'status': 'fail'}
-        else:
-            msg['dht22'] = requests.get('http://' + settings.arduino.ip).json()['dht22']
-        
-        if settings.sp2_00.ip == None:
-            msg['sp2_00'] = {'message': 'device IP not found', 'status': 'fail'}
-        else:
-            sp2_00 = broadlink.sp2(host=(settings.sp2_00.ip,80), mac=bytearray.fromhex(settings.sp2_00.mac.replace(':','')))
-            sp2_00.auth()
-            state = sp2_00.check_power()
-            if state:
-                msg['sp2_00'] = {'status':'succeed', 'message':'on'}
-            else:
-                msg['sp2_00'] = {'status':'succeed', 'message':'off'}
+        msg['dht22'] = func_arduino(settings.arduino.ip, settings.arduino.mac)
+        msg['sp2_00'] = func_sp2_00(settings.sp2_00.ip, settings.sp2_00.mac)
+        print(msg)
 
         ret= mqttc.publish(topic_up, json.dumps(msg))
-        print(msg)
         time.sleep(60)
 
