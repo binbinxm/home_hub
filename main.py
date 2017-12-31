@@ -128,7 +128,7 @@ def func_arduino(ip, mac):
     msg = {'message': 'device IP not found', 'status': 'fail'}
     try:
         if not ip == None:
-            msg = requests.get('http://' + settings.arduino.ip).json()['dht22']
+            msg = requests.get('http://' + settings.arduino.ip + '/dht22', timeout = 5).json()['dht22']
     except Exception:
         traceback.print_exc()
     finally:
