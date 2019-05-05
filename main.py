@@ -15,71 +15,27 @@ from subprocess import check_output
 import os
 import settings
 import broadlink
-import keys
 
-ProductKey = keys.ProductKey
-ClientId = keys.ClientId  # 自定义clientId
-DeviceName = keys.DeviceName
-DeviceSecret = keys.DeviceSecret
-
-broker_URL = ProductKey + ".iot-as-mqtt.cn-shanghai.aliyuncs.com"
-
-topic_up = ProductKey + '/' + DeviceName + '/' + 'uplink'
-topic_down = ProductKey + '/' + DeviceName + '/' + 'downlink'
-
-# signmethod
-signmethod = "hmacsha1"
-
-# 当前时间毫秒值
-us = math.modf(time.time())[0]
-ms = int(round(us * 1000))
-timestamp = str(ms)
-
-data = "".join(("clientId", ClientId,\
-        "deviceName", DeviceName,\
-        "productKey", ProductKey,\
-        "timestamp", timestamp\
-        ))
-print("data:", data)
-
-if "hmacsha1" == signmethod:
-    ret = hmac.new(\
-            bytes(DeviceSecret, encoding="utf-8"),\
-            bytes(data, encoding="utf-8"),\
-            hashlib.sha1).hexdigest()
-elif "hmacmd5" == signmethod:
-    ret = hmac.new(\
-            bytes(DeviceSecret, encoding="utf-8"),\
-            bytes(data, encoding="utf-8"),\
-            hashlib.md5).hexdigest()
-else:
-    raise ValueError
-
-sign = ret
-print("sign:", sign)
-
-# ======================================================
-
-strBroker = broker_URL
+broker_URL = 'iot.binya.tech'
 port = 1883
 
+username = ''
+password = ''
+client_id = 'home_docker'
+topic_up = '/home/env/up'
+topic_down = '/home/env/down'
+
+timestamp = str(time.time())
+
+# ======================================================
 isConnect = False
-
-client_id = "".join((ClientId,\
-        "|securemode=3",\
-        ",signmethod=", signmethod,\
-        ",timestamp=", timestamp,\
-        "|"))
-username = "".join((DeviceName, "&", ProductKey))
-password = sign
-
 print("="*60)
 print("client_id:", client_id)
 print("username:", username)
 print("password:", password)
 print("="*60)
-
 # ======================================================
+
 def on_connect(mqttc, obj, flags, rc):
     print("OnConnetc, rc: " + str(rc))
     mqttc.subscribe(topic_down, 0)
@@ -108,6 +64,7 @@ def on_exec(strcmd):
 
 # =====================================================
 
+'''
 def ip_lookup(mac_list):
     if type(mac_list) is not list:
         return None
@@ -122,9 +79,9 @@ def ip_lookup(mac_list):
                 if os.system('ping -c 1 ' + tmp) == 0:
                     ip[i] = tmp
     return ip
+'''
 
-
-def func_arduino(ip, mac):
+def func_arduino(ip, mac = ''):
     msg = {'message': 'device IP not found', 'status': 'fail'}
     try:
         if not ip == None:
@@ -153,14 +110,15 @@ def func_sp2_00(ip, mac):
 # =====================================================
 if __name__ == '__main__':
     mqttc = mqtt.Client(client_id)
-    mqttc.username_pw_set(username, password)
+    #mqttc.username_pw_set(username, password)
+    mqttc.username_pw_set('', '')
     mqttc.on_message = on_message
     mqttc.on_connect = on_connect
     mqttc.on_publish = on_publish
     mqttc.on_subscribe = on_subscribe
     mqttc.on_log = on_log
 
-    mqttc.connect(strBroker, port, 120)
+    mqttc.connect(broker_URL, port, 60)
     
     mqtt_thread = threading.Thread(target = mqttc.loop_forever)
     mqtt_thread.daemon = True
@@ -169,15 +127,17 @@ if __name__ == '__main__':
     time.sleep(3)
     
     while(True):
+        '''
         [settings.arduino.ip, settings.sp2_00.ip] = \
                 ip_lookup([settings.arduino.mac, settings.sp2_00.mac])
         print([settings.arduino.ip, settings.sp2_00.ip])
-        
+        '''
+
         msg = {}
         msg['dht22'] = func_arduino(settings.arduino.ip, settings.arduino.mac)
-        msg['sp2_00'] = func_sp2_00(settings.sp2_00.ip, settings.sp2_00.mac)
+        #msg['sp2_00'] = func_sp2_00(settings.sp2_00.ip, settings.sp2_00.mac)
         print(msg)
 
         ret= mqttc.publish(topic_up, json.dumps(msg))
-        time.sleep(60)
+        time.sleep(10)
 
