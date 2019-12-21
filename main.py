@@ -85,7 +85,7 @@ def func_arduino(ip, mac = ''):
     msg = {'message': 'device IP not found', 'status': 'fail'}
     try:
         if not ip == None:
-            msg = requests.get('http://' + settings.arduino.ip + '/dht22', timeout = 5).json()['dht22']
+            msg = requests.get('http://' + ip + '/dht22', timeout = 5).json()['dht22']
     except Exception:
         traceback.print_exc()
     finally:
@@ -134,7 +134,7 @@ if __name__ == '__main__':
         '''
 
         msg = {}
-        msg['dht22'] = func_arduino(settings.arduino.ip, settings.arduino.mac)
+        msg['dht22'] = func_arduino('10.0.0.203')
         #msg['sp2_00'] = func_sp2_00(settings.sp2_00.ip, settings.sp2_00.mac)
         print(msg)
 
